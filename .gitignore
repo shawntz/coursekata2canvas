@@ -1,0 +1,11 @@
+# R files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Shiny files
+rsconnect/
+
+# macOS
+.DS_Store
