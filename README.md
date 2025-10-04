@@ -1,12 +1,12 @@
-# CourseKata -> Gradebook Processor App
+# CourseKata ➡️ Gradebook Processor App
 
-A web application to process CourseKata gradebook files for Canvas upload.
+A web app to process CourseKata gradebook files for Canvas upload.
 
-## Deployment options
+## Deployment
 
-### -> ShinyApps.io
+### ➡️ ShinyApps.io
 
-1. **Install rsconnect:**
+1. **Install `rsconnect`:**
 
    ```r
    install.packages("rsconnect")
@@ -18,32 +18,32 @@ A web application to process CourseKata gradebook files for Canvas upload.
 
 3. **Deploy:**
 
-```bash
-make deploy
-```
+   ```bash
+   make deploy
+   ```
 
-or...
+   or...
 
-```r
-library(rsconnect)
-setAccountInfo(name="<ACCOUNT>", token="<TOKEN>", secret="<SECRET>")
-deployApp("gradebook-app")
-```
+   ```r
+   library(rsconnect)
+   setAccountInfo(name="<ACCOUNT>", token="<TOKEN>", secret="<SECRET>")
+   deployApp("coursekata2canvas")
+   ```
 
-### -> Local Development
+### ➡️ Local development
 
 Run the app locally:
 
-```bash
-make run
-```
-
-or...
-
-```r
-library(shiny)
-runApp("app.R")
-```
+   ```bash
+   make run
+   ```
+   
+   or...
+   
+   ```r
+   library(shiny)
+   runApp("app.R")
+   ```
 
 ## How to use the app
 
