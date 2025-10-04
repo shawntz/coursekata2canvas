@@ -2,6 +2,10 @@
 
 A web app to process CourseKata gradebook files for Canvas upload.
 
+## 🌟 Use it here or deploy your own fork!
+
+🌐 https://shawnschwartz.shinyapps.io/coursekata2canvas/
+
 ## Deployment
 
 ### ➡️ ShinyApps.io
