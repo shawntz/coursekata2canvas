@@ -76,3 +76,7 @@ Run the app locally:
 - R >= 4.0
 - tidyverse
 - shiny
+
+## Need help? 😕
+
+💪 Checkout the configuration guide here: https://github.com/shawntz/coursekata2canvas/wiki
