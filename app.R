@@ -264,6 +264,8 @@ server <- function(input, output, session) {
   config_canvas_ids <- reactiveVal(NULL)
   config_ch_prefix <- reactiveVal(NULL)
   config_release_version <- reactiveVal(NULL)
+  config_threshold_cap <- reactiveVal(NULL)
+  config_threshold_pass <- reactiveVal(NULL)
 
   # Default configuration values
   default_canvas_ids <- paste(c(
@@ -287,6 +289,8 @@ server <- function(input, output, session) {
   ), collapse = ", ")
 
   default_release_version <- "release/5.6.2-exp1:"
+  default_threshold_cap <- 0.9
+  default_threshold_pass <- 0.9
 
   # Handle config file upload
   observeEvent(input$config_file, {
@@ -301,6 +305,8 @@ server <- function(input, output, session) {
         config_canvas_ids(config_data$canvas_ids)
         config_ch_prefix(config_data$ch_prefix)
         config_release_version(if (!is.null(config_data$release_version)) config_data$release_version else default_release_version)
+        config_threshold_cap(if (!is.null(config_data$threshold_cap)) config_data$threshold_cap else default_threshold_cap)
+        config_threshold_pass(if (!is.null(config_data$threshold_pass)) config_data$threshold_pass else default_threshold_pass)
 
         showNotification(
           "Configuration file loaded successfully!",
@@ -347,7 +353,23 @@ server <- function(input, output, session) {
         textInput("release_version",
                  "Release Version:",
                  value = default_release_version,
-                 width = "100%")
+                 width = "100%"),
+        helpText("Score adjustment threshold cap (0-1)"),
+        numericInput("threshold_cap",
+                    "Threshold Cap:",
+                    value = default_threshold_cap,
+                    min = 0,
+                    max = 1,
+                    step = 0.05,
+                    width = "100%"),
+        helpText("Passing threshold for final score (0-1)"),
+        numericInput("threshold_pass",
+                    "Passing Threshold:",
+                    value = default_threshold_pass,
+                    min = 0,
+                    max = 1,
+                    step = 0.05,
+                    width = "100%")
       )
     }
   })
@@ -382,6 +404,8 @@ server <- function(input, output, session) {
         canvas_ids <- config_canvas_ids()
         ch_prefix <- config_ch_prefix()
         release_version <- if (!is.null(config_release_version())) config_release_version() else default_release_version
+        threshold_cap <- if (!is.null(config_threshold_cap())) config_threshold_cap() else default_threshold_cap
+        threshold_pass <- if (!is.null(config_threshold_pass())) config_threshold_pass() else default_threshold_pass
       } else if (config_visible() && !is.null(input$canvas_ids) && !is.null(input$ch_prefix)) {
         # Use manual configuration
         canvas_ids <- trimws(strsplit(input$canvas_ids, "\n")[[1]])
@@ -391,6 +415,8 @@ server <- function(input, output, session) {
         ch_prefix <- ch_prefix[ch_prefix != ""]  # Remove empty entries
 
         release_version <- if (!is.null(input$release_version)) input$release_version else default_release_version
+        threshold_cap <- if (!is.null(input$threshold_cap)) input$threshold_cap else default_threshold_cap
+        threshold_pass <- if (!is.null(input$threshold_pass)) input$threshold_pass else default_threshold_pass
       } else {
         # Use default configuration
         canvas_ids <- c(
@@ -414,10 +440,13 @@ server <- function(input, output, session) {
         )
 
         release_version <- default_release_version
+        threshold_cap <- default_threshold_cap
+        threshold_pass <- default_threshold_pass
       }
 
       # Compute scores
-      scores <- compute_scores(coursekata_path, ch = ch_prefix, release_version = release_version)
+      scores <- compute_scores(coursekata_path, ch = ch_prefix, release_version = release_version,
+                              threshold_cap = threshold_cap, threshold_pass = threshold_pass)
 
       # Generate Canvas gradebook
       result <- make_canvas_gradebook(canvas_path, scores, canvas_ids)
@@ -487,6 +516,8 @@ server <- function(input, output, session) {
       canvas_ids <- config_canvas_ids()
       ch_prefix <- config_ch_prefix()
       release_version <- if (!is.null(config_release_version())) config_release_version() else default_release_version
+      threshold_cap <- if (!is.null(config_threshold_cap())) config_threshold_cap() else default_threshold_cap
+      threshold_pass <- if (!is.null(config_threshold_pass())) config_threshold_pass() else default_threshold_pass
     } else if (config_visible() && !is.null(input$canvas_ids) && !is.null(input$ch_prefix)) {
       # Export manual config
       canvas_ids <- trimws(strsplit(input$canvas_ids, "\n")[[1]])
@@ -496,6 +527,8 @@ server <- function(input, output, session) {
       ch_prefix <- ch_prefix[ch_prefix != ""]
 
       release_version <- if (!is.null(input$release_version)) input$release_version else default_release_version
+      threshold_cap <- if (!is.null(input$threshold_cap)) input$threshold_cap else default_threshold_cap
+      threshold_pass <- if (!is.null(input$threshold_pass)) input$threshold_pass else default_threshold_pass
     } else {
       # Export default config
       canvas_ids <- c(
@@ -519,13 +552,17 @@ server <- function(input, output, session) {
       )
 
       release_version <- default_release_version
+      threshold_cap <- default_threshold_cap
+      threshold_pass <- default_threshold_pass
     }
 
     # Create config object
     config_obj <- list(
       canvas_ids = canvas_ids,
       ch_prefix = ch_prefix,
-      release_version = release_version
+      release_version = release_version,
+      threshold_cap = threshold_cap,
+      threshold_pass = threshold_pass
     )
 
     # Convert to JSON

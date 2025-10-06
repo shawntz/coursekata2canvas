@@ -29,8 +29,10 @@ get_max_score <- function(str, release_version = "release/5.6.2-exp1:") {
 #' @param file Path to CourseKata CSV file
 #' @param chs Vector of chapter prefixes to process
 #' @param release_version Release version prefix (default: "release/5.6.2-exp1:")
+#' @param threshold_cap Threshold cap for score adjustment (default: 0.9)
+#' @param threshold_pass Threshold for passing score (default: 0.9)
 #' @return List of dataframes with computed scores per chapter
-compute_scores <- function(file, chs, release_version = "release/5.6.2-exp1:") {
+compute_scores <- function(file, chs, release_version = "release/5.6.2-exp1:", threshold_cap = 0.9, threshold_pass = 0.9) {
   scores <- list()
 
   for (ch in chs) {
@@ -86,8 +88,8 @@ compute_scores <- function(file, chs, release_version = "release/5.6.2-exp1:") {
       mutate(total_qs = rowSums(across(starts_with("qs_")))) |>
       mutate(raw_avg = total_resp / total_qs) |>
       mutate(capped_avg = pmin(raw_avg, 1)) |>
-      mutate(adjusted_score = if_else(capped_avg <= 0.9, capped_avg / 0.9, 0.9)) |>
-      mutate(final_score = if_else(adjusted_score >= 0.9, 1, 0))
+      mutate(adjusted_score = if_else(capped_avg <= threshold_cap, capped_avg / threshold_cap, threshold_cap)) |>
+      mutate(final_score = if_else(adjusted_score >= threshold_pass, 1, 0))
 
     scores[[ch]] <- df
   }
