@@ -212,6 +212,16 @@ ui <- fluidPage(
                     max = 12),
         hr(),
         h4(HTML("&#128295; Configuration")),
+        fileInput("config_file",
+                  "Upload Configuration File (JSON):",
+                  accept = c(".json"),
+                  buttonLabel = "Browse...",
+                  placeholder = "No config file selected"),
+        helpText("Upload a JSON config file with canvas_ids and ch_prefix, or use advanced configuration below."),
+        actionButton("export_config",
+                    "Export Current Configuration",
+                    class = "btn btn-secondary btn-sm",
+                    style = "margin-bottom: 15px;"),
         actionButton("toggle_config",
                     "Show/Hide Advanced Configuration",
                     class = "btn btn-secondary btn-sm",
@@ -250,6 +260,10 @@ server <- function(input, output, session) {
   # Reactive value to track config panel visibility
   config_visible <- reactiveVal(FALSE)
 
+  # Reactive values to store configuration
+  config_canvas_ids <- reactiveVal(NULL)
+  config_ch_prefix <- reactiveVal(NULL)
+
   # Default configuration values
   default_canvas_ids <- paste(c(
     "CourseKata: Pre-Chapter 1 Modules (including survey) (637734)",
@@ -270,6 +284,40 @@ server <- function(input, output, session) {
     "pre", "ch_1", "ch_2", "ch_3", "ch_4", "ch_5",
     "ch_6", "ch_7", "ch_9", "ch_10", "ch_11", "ch_12"
   ), collapse = ", ")
+
+  # Handle config file upload
+  observeEvent(input$config_file, {
+    req(input$config_file)
+
+    tryCatch({
+      # Read JSON config file
+      config_data <- jsonlite::fromJSON(input$config_file$datapath)
+
+      # Validate config structure
+      if (!is.null(config_data$canvas_ids) && !is.null(config_data$ch_prefix)) {
+        config_canvas_ids(config_data$canvas_ids)
+        config_ch_prefix(config_data$ch_prefix)
+
+        showNotification(
+          "Configuration file loaded successfully!",
+          type = "message",
+          duration = 3
+        )
+      } else {
+        showNotification(
+          "Invalid config file format. Must contain 'canvas_ids' and 'ch_prefix' fields.",
+          type = "error",
+          duration = 5
+        )
+      }
+    }, error = function(e) {
+      showNotification(
+        paste("Error reading config file:", e$message),
+        type = "error",
+        duration = 5
+      )
+    })
+  })
 
   # Toggle configuration panel
   observeEvent(input$toggle_config, {
@@ -319,9 +367,13 @@ server <- function(input, output, session) {
       canvas_path <- input$canvas_file$datapath
       coursekata_path <- input$coursekata_file$datapath
 
-      # Get configuration values
-      if (config_visible() && !is.null(input$canvas_ids) && !is.null(input$ch_prefix)) {
-        # Use custom configuration
+      # Get configuration values (priority: uploaded config > manual config > defaults)
+      if (!is.null(config_canvas_ids()) && !is.null(config_ch_prefix())) {
+        # Use uploaded configuration file
+        canvas_ids <- config_canvas_ids()
+        ch_prefix <- config_ch_prefix()
+      } else if (config_visible() && !is.null(input$canvas_ids) && !is.null(input$ch_prefix)) {
+        # Use manual configuration
         canvas_ids <- trimws(strsplit(input$canvas_ids, "\n")[[1]])
         canvas_ids <- canvas_ids[canvas_ids != ""]  # Remove empty lines
 
@@ -411,6 +463,65 @@ server <- function(input, output, session) {
       content = csv_content,
       filename = filename
     ))
+  })
+
+  # Export current configuration
+  observeEvent(input$export_config, {
+    # Determine which configuration to export
+    if (!is.null(config_canvas_ids()) && !is.null(config_ch_prefix())) {
+      # Export uploaded config
+      canvas_ids <- config_canvas_ids()
+      ch_prefix <- config_ch_prefix()
+    } else if (config_visible() && !is.null(input$canvas_ids) && !is.null(input$ch_prefix)) {
+      # Export manual config
+      canvas_ids <- trimws(strsplit(input$canvas_ids, "\n")[[1]])
+      canvas_ids <- canvas_ids[canvas_ids != ""]
+
+      ch_prefix <- trimws(strsplit(input$ch_prefix, ",")[[1]])
+      ch_prefix <- ch_prefix[ch_prefix != ""]
+    } else {
+      # Export default config
+      canvas_ids <- c(
+        "CourseKata: Pre-Chapter 1 Modules (including survey) (637734)",
+        "CourseKata: Chapter 1 Modules (637723)",
+        "CourseKata: Chapter 2 Modules (637727)",
+        "CourseKata: Chapter 3 Modules (637728)",
+        "CourseKata: Chapter 4 Modules (637729)",
+        "CourseKata: Chapter 5 Modules (637730)",
+        "CourseKata: Chapter 6 Modules (637731)",
+        "CourseKata: Chapter 7 Modules (637732)",
+        "CourseKata: Chapter 9 Modules (637733)",
+        "CourseKata: Chapter 10 Modules (637724)",
+        "CourseKata: Chapter 11 Modules (637725)",
+        "CourseKata: Chapter 12 Modules (637726)"
+      )
+
+      ch_prefix <- c(
+        "pre", "ch_1", "ch_2", "ch_3", "ch_4", "ch_5",
+        "ch_6", "ch_7", "ch_9", "ch_10", "ch_11", "ch_12"
+      )
+    }
+
+    # Create config object
+    config_obj <- list(
+      canvas_ids = canvas_ids,
+      ch_prefix = ch_prefix
+    )
+
+    # Convert to JSON
+    json_content <- jsonlite::toJSON(config_obj, pretty = TRUE, auto_unbox = FALSE)
+
+    # Use JavaScript to trigger download
+    session$sendCustomMessage("download", list(
+      content = as.character(json_content),
+      filename = "coursekata_config.json"
+    ))
+
+    showNotification(
+      "Configuration exported successfully!",
+      type = "message",
+      duration = 3
+    )
   })
 }
 
