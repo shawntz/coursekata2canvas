@@ -263,6 +263,7 @@ server <- function(input, output, session) {
   # Reactive values to store configuration
   config_canvas_ids <- reactiveVal(NULL)
   config_ch_prefix <- reactiveVal(NULL)
+  config_release_version <- reactiveVal(NULL)
 
   # Default configuration values
   default_canvas_ids <- paste(c(
@@ -285,6 +286,8 @@ server <- function(input, output, session) {
     "ch_6", "ch_7", "ch_9", "ch_10", "ch_11", "ch_12"
   ), collapse = ", ")
 
+  default_release_version <- "release/5.6.2-exp1:"
+
   # Handle config file upload
   observeEvent(input$config_file, {
     req(input$config_file)
@@ -297,6 +300,7 @@ server <- function(input, output, session) {
       if (!is.null(config_data$canvas_ids) && !is.null(config_data$ch_prefix)) {
         config_canvas_ids(config_data$canvas_ids)
         config_ch_prefix(config_data$ch_prefix)
+        config_release_version(if (!is.null(config_data$release_version)) config_data$release_version else default_release_version)
 
         showNotification(
           "Configuration file loaded successfully!",
@@ -338,6 +342,11 @@ server <- function(input, output, session) {
         textInput("ch_prefix",
                  "Chapter Prefixes:",
                  value = default_ch_prefix,
+                 width = "100%"),
+        helpText("Enter the CourseKata release version prefix (e.g., release/5.6.2-exp1:)"),
+        textInput("release_version",
+                 "Release Version:",
+                 value = default_release_version,
                  width = "100%")
       )
     }
@@ -372,6 +381,7 @@ server <- function(input, output, session) {
         # Use uploaded configuration file
         canvas_ids <- config_canvas_ids()
         ch_prefix <- config_ch_prefix()
+        release_version <- if (!is.null(config_release_version())) config_release_version() else default_release_version
       } else if (config_visible() && !is.null(input$canvas_ids) && !is.null(input$ch_prefix)) {
         # Use manual configuration
         canvas_ids <- trimws(strsplit(input$canvas_ids, "\n")[[1]])
@@ -379,6 +389,8 @@ server <- function(input, output, session) {
 
         ch_prefix <- trimws(strsplit(input$ch_prefix, ",")[[1]])
         ch_prefix <- ch_prefix[ch_prefix != ""]  # Remove empty entries
+
+        release_version <- if (!is.null(input$release_version)) input$release_version else default_release_version
       } else {
         # Use default configuration
         canvas_ids <- c(
@@ -400,10 +412,12 @@ server <- function(input, output, session) {
           "pre", "ch_1", "ch_2", "ch_3", "ch_4", "ch_5",
           "ch_6", "ch_7", "ch_9", "ch_10", "ch_11", "ch_12"
         )
+
+        release_version <- default_release_version
       }
 
       # Compute scores
-      scores <- compute_scores(coursekata_path, ch = ch_prefix)
+      scores <- compute_scores(coursekata_path, ch = ch_prefix, release_version = release_version)
 
       # Generate Canvas gradebook
       result <- make_canvas_gradebook(canvas_path, scores, canvas_ids)
@@ -472,6 +486,7 @@ server <- function(input, output, session) {
       # Export uploaded config
       canvas_ids <- config_canvas_ids()
       ch_prefix <- config_ch_prefix()
+      release_version <- if (!is.null(config_release_version())) config_release_version() else default_release_version
     } else if (config_visible() && !is.null(input$canvas_ids) && !is.null(input$ch_prefix)) {
       # Export manual config
       canvas_ids <- trimws(strsplit(input$canvas_ids, "\n")[[1]])
@@ -479,6 +494,8 @@ server <- function(input, output, session) {
 
       ch_prefix <- trimws(strsplit(input$ch_prefix, ",")[[1]])
       ch_prefix <- ch_prefix[ch_prefix != ""]
+
+      release_version <- if (!is.null(input$release_version)) input$release_version else default_release_version
     } else {
       # Export default config
       canvas_ids <- c(
@@ -500,12 +517,15 @@ server <- function(input, output, session) {
         "pre", "ch_1", "ch_2", "ch_3", "ch_4", "ch_5",
         "ch_6", "ch_7", "ch_9", "ch_10", "ch_11", "ch_12"
       )
+
+      release_version <- default_release_version
     }
 
     # Create config object
     config_obj <- list(
       canvas_ids = canvas_ids,
-      ch_prefix = ch_prefix
+      ch_prefix = ch_prefix,
+      release_version = release_version
     )
 
     # Convert to JSON

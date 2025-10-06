@@ -11,9 +11,10 @@ suppressPackageStartupMessages(library(tidyverse))
 #' Extract maximum score from CourseKata format string
 #'
 #' @param str String in format "release/5.6.2-exp1:5, A:5, B:5"
+#' @param release_version Release version prefix to remove (default: "release/5.6.2-exp1:")
 #' @return Numeric maximum score
-get_max_score <- function(str) {
-  parsed <- gsub("release/5.6.2-exp1:", "", str) |>
+get_max_score <- function(str, release_version = "release/5.6.2-exp1:") {
+  parsed <- gsub(release_version, "", str) |>
     substr(1, 2)
 
   if (substr(parsed, 2, 2) == ",") {
@@ -27,8 +28,9 @@ get_max_score <- function(str) {
 #'
 #' @param file Path to CourseKata CSV file
 #' @param chs Vector of chapter prefixes to process
+#' @param release_version Release version prefix (default: "release/5.6.2-exp1:")
 #' @return List of dataframes with computed scores per chapter
-compute_scores <- function(file, chs) {
+compute_scores <- function(file, chs, release_version = "release/5.6.2-exp1:") {
   scores <- list()
 
   for (ch in chs) {
@@ -48,7 +50,7 @@ compute_scores <- function(file, chs) {
 
     max_points <- df |>
       slice(1) |>
-      mutate(across(starts_with(ch), get_max_score)) |>
+      mutate(across(starts_with(ch), ~ get_max_score(., release_version))) |>
       select(matches(ch_regex)) |>
       pivot_longer(cols = everything(), names_to = "page", values_to = "max")
 
